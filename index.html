@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marstoy → LEGO Finder</title>
+<meta name="description" content="Every Marstoy brick kit matched to the real LEGO set, with links to both.">
+<style>
+  :root {
+    --bg: #f6f6f4; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --border: #e3e2dd; --lego: #d01012; --lego-text: #ffffff;
+    --mars: #1f2a44; --mars-text: #ffffff; --badge: #f1e7c6; --badge-text: #6b5300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --card: #1f1f1d; --text: #ecebe6; --muted: #a09f98;
+      --border: #33322f; --badge: #3d3418; --badge-text: #f1d77a;
+      --mars: #3a4a73;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg);
+    border-bottom: 1px solid var(--border); padding: 16px; }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 1.4rem; }
+  .sub { margin: 0 0 12px; color: var(--muted); font-size: .9rem; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=search] { flex: 1 1 260px; padding: 10px 12px; font-size: 1rem;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); }
+  label { color: var(--muted); font-size: .9rem; display: flex; gap: 6px; align-items: center; }
+  .count { color: var(--muted); font-size: .9rem; }
+  main { padding: 16px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; display: flex; flex-direction: column; }
+  .img { aspect-ratio: 4 / 3; background: #fff; display: flex; align-items: center; justify-content: center; }
+  .img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .name { font-weight: 600; line-height: 1.25; }
+  .meta { color: var(--muted); font-size: .85rem; }
+  .badge { align-self: flex-start; background: var(--badge); color: var(--badge-text);
+    font-size: .75rem; padding: 2px 8px; border-radius: 99px; }
+  .links { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
+  .links a { flex: 1; text-align: center; text-decoration: none; font-size: .85rem; font-weight: 600;
+    padding: 8px 6px; border-radius: 6px; }
+  .lego { background: var(--lego); color: var(--lego-text); }
+  .mars { background: var(--mars); color: var(--mars-text); }
+  .empty { text-align: center; color: var(--muted); padding: 40px; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 24px 16px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Marstoy → LEGO Finder</h1>
+    <p class="sub">Every Marstoy brick kit matched to the real LEGO set (reverse the SKU digits: M63224 → 42236).</p>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search by name, LEGO number or Marstoy SKU…" autocomplete="off">
+      <label><input type="checkbox" id="liveOnly"> Only sets still sold on LEGO.com</label>
+      <span class="count" id="count"></span>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No sets match that search.</div>
+</main>
+<footer>Set images from Brickset. Not affiliated with LEGO or Marstoy.</footer>
+<script src="data.js"></script>
+<script>
+  const grid = document.getElementById('grid');
+  const q = document.getElementById('q');
+  const liveOnly = document.getElementById('liveOnly');
+  const count = document.getElementById('count');
+  const empty = document.getElementById('empty');
+
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  const cards = window.SETS.map(s => {
+    const el = document.createElement('article');
+    el.className = 'card';
+    el.innerHTML = `
+      <div class="img"><img loading="lazy" alt="${esc(s.n)}"
+        src="https://images.brickset.com/sets/images/${s.id}-1.jpg"
+        onerror="this.onerror=null;this.src='https://cdn.rebrickable.com/media/sets/${s.id}-1.jpg'"></div>
+      <div class="body">
+        <div class="name">${esc(s.n)}</div>
+        <div class="meta">LEGO ${s.id} · Marstoy ${esc(s.s)}</div>
+        ${s.live ? '' : '<span class="badge">Retired: LEGO button opens Brickset</span>'}
+        <div class="links">
+          <a class="lego" href="${s.l}" target="_blank" rel="noopener">LEGO</a>
+          <a class="mars" href="${s.m}" target="_blank" rel="noopener">Marstoy</a>
+        </div>
+      </div>`;
+    grid.appendChild(el);
+    return { el, s, text: (s.n + ' ' + s.id + ' ' + s.s).toLowerCase() };
+  });
+
+  function filter() {
+    const term = q.value.trim().toLowerCase();
+    let shown = 0;
+    for (const c of cards) {
+      const ok = (!term || c.text.includes(term)) && (!liveOnly.checked || c.s.live);
+      c.el.hidden = !ok;
+      if (ok) shown++;
+    }
+    count.textContent = `${shown} of ${cards.length} sets`;
+    empty.hidden = shown > 0;
+  }
+  q.addEventListener('input', filter);
+  liveOnly.addEventListener('change', filter);
+  filter();
+</script>
+</body>
+</html>
